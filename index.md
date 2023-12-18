@@ -5,24 +5,8 @@ You can use the [editor on GitHub](https://github.com/BU-IE-582/fall-23-ilaydace
 Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
 
 ### Markdown
-[report.html](url}
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+https://github.com/BU-IE-582/fall-23-BisherAllaham25/blob/main/report.html
 
-```markdown
-Syntax highlighted code block
 
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
 ```
 
