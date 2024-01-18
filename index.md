@@ -11,5 +11,5 @@ and this is the jupyter file
 
 ### Project
 this is the project for IE582 fall 23
-project [report](https://github.com/BU-IE-582/fall-23-BisherAllaham25/blob/main/IE582_Fall23_Project_Report.pdf)
-also a link for the [code](https://github.com/BU-IE-582/fall-23-BisherAllaham25/blob/main/IE582_Fall23_Project.ipynb)
+project [report](https://bu-ie-582.github.io/fall-23-BisherAllaham25/IE582_Fall23_Project_Report.pdf)
+also a link for the [code](https://bu-ie-582.github.io/fall-23-BisherAllaham25/IE582_Fall23_Project.ipynb)
