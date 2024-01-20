@@ -15,6 +15,6 @@ project [report](https://bu-ie-582.github.io/fall-23-BisherAllaham25/IE582_Fall2
 also a link for the [code](https://bu-ie-582.github.io/fall-23-BisherAllaham25/IE582_Fall23_Project.ipynb)
 
 ## HW3 files
-the html file for HW3 is [here](https://bu-ie-582.github.io/fall-23-BisherAllaham25/blob/main/IE582_HW3.html) 
+the html file for HW3 is [here](https://bu-ie-582.github.io/fall-23-BisherAllaham25/IE582_HW3.html) 
 the sources used are mentioned at the end of the report (*html)
-also the [code](https://bu-ie-582.github.io/fall-23-BisherAllaham25/blob/main/IE582_HW3.Rmd) is *rmd format
+also the [code](https://bu-ie-582.github.io/fall-23-BisherAllaham25/IE582_HW3.Rmd) is *rmd format
