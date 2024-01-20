@@ -1,0 +1,288 @@
+---
+title: "IE582_fall-23/HW_3"
+author: "Bisher Allaham"
+date: "20/01/2024"
+---
+Generating the data:
+4 different settings, 8 variables, 2000 data points in total
+
+```{r}
+library(MASS)
+# Set the seed for reproducibility
+set.seed(102)
+
+# Number of data points per set
+num_points_per_set <- 500
+
+# Number of variables
+num_variables <- 8
+
+# Number of different parameter settings (sets)
+num_settings <- 4
+
+# Initialize an empty matrix to store the data
+data <- matrix(0, nrow = num_points_per_set * num_settings, ncol = num_variables)
+
+# Initialize a vector to store labels
+labels <- character(num_points_per_set * num_settings)
+
+# Loop through each parameter setting (set)
+for (setting in 1:num_settings) {
+  # Generate mean values for each variable with a larger separation between sets
+  means <- runif(num_variables, min = 8 * setting, max = 8 * (setting + 1))
+  
+  # Generate a covariance matrix
+  cov_matrix <- matrix(runif(num_variables^2), nrow = num_variables)
+  
+  # Ensure the covariance matrix is symmetric and positive definite
+  cov_matrix <- 0.5 * (cov_matrix + t(cov_matrix)) + num_variables * diag(num_variables)
+  
+  # Generate data points for the current setting
+  current_data <- mvrnorm(n = num_points_per_set, mu = means, Sigma = cov_matrix)
+  
+  # Add the generated data to the main matrix
+  data[((setting - 1) * num_points_per_set + 1):(setting * num_points_per_set), ] <- current_data
+  # Assign labels to the data points
+  labels[((setting - 1) * num_points_per_set + 1):(setting * num_points_per_set)] <- paste("Set", setting, "_Point", 1:num_points_per_set)
+}
+
+```
+
+This chunk is to add labels to the data after converting the matrix to a data frame
+But it wasn't used
+```{r}
+
+# Convert the matrix to a data frame
+data_df <- as.data.frame(data)
+
+# Add labels to the data frame
+data_df$labels <- labels
+
+# Display the structure of the data frame
+str(data_df)
+
+```
+Here I plotted the data, 2 variables at a time
+```{r}
+# Plot the pair plot
+pairs(data, col = rep(1:num_settings, each = num_points_per_set), 
+      pch = 19, main = "Pair Plot of Generated Data",
+      cex.labels = 1.2, cex.axis = 1.2)
+
+# Add a legend
+legend("topright", legend = 1:num_settings, col = 1:num_settings, pch = 19, title = "Set")
+```
+
+This part is to visualize the data after partitioning using k-means
+```{r}
+require("ggplot2")
+require("factoextra")
+require("cluster")
+require("data.table")
+# 2. Compute k-means
+set.seed(123)
+km.res <- kmeans(data, 4, nstart = 500)
+# 3. Visualize
+fviz_cluster(km.res, data,
+             palette = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"),
+             ggtheme = theme_minimal(),
+             main = "Partitioning Clustering Plot"
+             )
+```
+This is PAM method for clustering
+```{r}
+library(randomForest)
+
+# Train random forest for clustering
+rf_model <- randomForest(data_df, ntree = 2000, mtry = 2, proximity = TRUE)
+# Extract proximity matrix
+prox_matrix <- rf_model$proximity
+
+suppressPackageStartupMessages(library(cluster))
+pam.rf <- pam(prox_matrix, 4)
+pred <- cbind(pam.rf$clustering, data_df$labels)
+fviz_cluster(pam.rf, data,
+             palette = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"),
+             ggtheme = theme_minimal(),
+             main = "PAM clustering"
+             )
+```
+I left here..
+```{r}
+library(randomForest)
+
+rf_data <- randomForest(x = data, mtry = 2, ntree = 2000, proximity = TRUE)
+
+# Output information about the trained model
+rf_data
+# proximity
+prox <- rf_data$proximity
+# Convert proximity values to dissimilarity
+dissimilarity_matrix <- sqrt(1 - prox)
+# Partitioning Around Medoids (PAM)
+pam.rf2 <- pam(dissimilarity_matrix, 4)
+# visualize with a graph
+fviz_cluster(pam.rf2, data,
+             palette = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"),
+             ggtheme = theme_minimal(),
+             main = "PAM clustering"
+             )
+
+
+```
+here I tried hierarchical clustering with ward method
+```{r}
+sol = hclust(dist(data), method = "ward.D")
+
+plot(sol,cex = 0.3,hang = - 10, main = "Ward-linkage Cluster Dendrogram")
+rect.hclust(sol, k=4, border="red")
+cluster_id = cutree(as.hclust(sol), k = 4)
+table(cluster_id)
+data_cluster = data.frame(cluster_id)
+tmp=cbind(cluster_id=data_cluster$cluster_id,data)
+```
+
+computing sample mean and cov matrix of each cluster
+```{r}
+# Hierarchical Clustering
+cluster_id_hc <- cutree(as.hclust(sol), k = 4)
+
+# Partitioning Around Medoids (PAM)
+cluster_id_pam <- pam.rf2$clustering
+
+# K-means Clustering
+cluster_id_kmeans <- km.res$cluster
+
+
+# Function to compute sample mean vector and covariance matrix for each cluster
+compute_cluster_stats <- function(data, cluster_id) {
+  unique_clusters <- unique(cluster_id)
+  num_clusters <- length(unique_clusters)
+  
+  cluster_means <- matrix(0, nrow = num_clusters, ncol = ncol(data))
+  cluster_covs <- array(0, dim = c(ncol(data), ncol(data), num_clusters))
+  
+  for (i in 1:num_clusters) {
+    cluster_data <- data[cluster_id == unique_clusters[i], ]
+    cluster_means[i, ] <- colMeans(cluster_data, na.rm = TRUE)
+    cluster_covs[, , i] <- cov(cluster_data, use = "pairwise")
+  }
+  
+  list(cluster_means = cluster_means, cluster_covs = cluster_covs)
+}
+
+# Compute cluster statistics for hierarchical clustering
+stats_hc <- compute_cluster_stats(data, cluster_id_hc)
+
+# Compute cluster statistics for PAM
+stats_pam <- compute_cluster_stats(data, cluster_id_pam)
+
+# Compute cluster statistics for k-means
+stats_kmeans <- compute_cluster_stats(data, cluster_id_kmeans)
+
+# Print the computed statistics
+print("Hierarchical Clustering:")
+print(stats_hc)
+
+print("\nPAM:")
+print(stats_pam)
+
+print("\nK-Means:")
+print(stats_kmeans)
+
+```
+
+Adding noise variables
+```{r}
+# Number of noise variables
+num_noise_variables <- 8
+
+# Generate random binary noise variables from a Bernoulli distribution
+noise_variables <- matrix(rbinom(n = nrow(data) * num_noise_variables, size = 1, prob = 0.5), ncol = num_noise_variables)
+
+# Combine the original data with the binary noise variables
+data_with_noise <- cbind(data, noise_variables)
+
+# Display the structure of the new data
+str(data_with_noise)
+
+```
+do the clustering for the new data using the three models (k-means, PAM, hclust-ward)
+```{r}
+# finding proximity using random forest
+rf_data2 <- randomForest(x = data_with_noise, mtry = 2, ntree = 2000, proximity = TRUE)
+# proximity
+prox2 <- rf_data2$proximity
+# Convert proximity values to dissimilarity
+dissimilarity_matrix2 <- sqrt(1 - prox2)
+
+km.res <- kmeans(data_with_noise, 4, nstart = 500)
+pam.rf <- pam(dissimilarity_matrix2, 4)
+sol = hclust(dist(data_with_noise), method = "ward.D")
+
+# 
+# Hierarchical Clustering
+cluster_id_hc <- cutree(as.hclust(sol), k = 4)
+
+# Partitioning Around Medoids (PAM)
+cluster_id_pam <- pam.rf$clustering
+
+# K-means Clustering
+cluster_id_kmeans <- km.res$cluster
+
+# Compute cluster statistics for hierarchical clustering
+stats_hc <- compute_cluster_stats(data_with_noise, cluster_id_hc)
+
+# This function is defined in the previous chunk
+# Compute cluster statistics for PAM
+stats_pam <- compute_cluster_stats(data_with_noise, cluster_id_pam)
+
+# Compute cluster statistics for k-means
+stats_kmeans <- compute_cluster_stats(data_with_noise, cluster_id_kmeans)
+
+# Print the computed statistics
+print("Hierarchical Clustering:")
+print(stats_hc)
+
+print("\nPAM:")
+print(stats_pam)
+
+print("\nK-Means:")
+print(stats_kmeans)
+```
+```{r}
+fviz_cluster(pam.rf, data_with_noise,
+             palette = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"),
+             ggtheme = theme_minimal(),
+             main = "PAM clustering"
+             )
+fviz_cluster(km.res, data_with_noise,
+             palette = c("#00AFBB","#2E9FDF", "#E7B800", "#FC4E07"),
+             ggtheme = theme_minimal(),
+             main = "k-means clustering"
+             )
+plot(sol,cex = 0.3,hang = - 10, main = "Ward-linkage Cluster Dendrogram")
+rect.hclust(sol, k=4, border="red")
+table(cluster_id_hc)
+table(cluster_id_pam)
+table(cluster_id_kmeans)
+
+
+```
+After seeing the results, it seems that PAM is sensitive to noise and outliers as it merged two clusters and undermined the other two
+On the other hand, k-means works perfectly and hierarchical clustering is still good in comparison with PAM
+
+random forest works well with this type of data because it partitions 2 variables at a time and it is very deep, since I used 2000 trees in the parameters
+this method is useful for data processing that makes clustering in other models easier as we saw in hierarchical clustering, However it doesn't reduce noise much which might cause merging of clusters. However, I expect the model to work better with larger number of variables although it would take longer time to run because we would need to increase the number of trees
+
+I should mention that in the data I generated the difference in means between data sets was fairly big, making it easier to cluster
+
+this analyses is based on synthetic data, but it should be compared to real data for accurate measurement of performance and to better understand the behavior of different models on this type of data
+
+
+sources:
+https://gradientdescending.com/unsupervised-random-forest-example/
+https://github.com/Anranmg/project506/blob/master/project506/final/aggcluster.r
+
+I also utalized the power of openAI
+https://chat.openai.com/share/f96a185d-6389-4ad3-8c43-90a3cb90a928
